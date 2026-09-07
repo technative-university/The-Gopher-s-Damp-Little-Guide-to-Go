@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Gopher's Damp Little Guide to Go</title>
+<style>
+:root{
+  --paper:#FDFAF0;
+  --paper2:#F5EEDC;
+  --ink:#231F1C;
+  --ink-soft:#4A423C;
+  --dirt:#7C4A2A;
+  --dirt-dk:#54301A;
+  --cyan:#00A5C7;
+  --shout:#DC2A5C;
+  --turnip:#7A55C0;
+  --marker:#FBE84F;
+  --fur:#CE9C68;
+  --fur-dk:#A5764A;
+  --display:"Bradley Hand","Chalkboard SE","Comic Sans MS","Segoe Print","Comic Neue",cursive;
+  --body:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --code:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(124,74,42,.06), transparent 45%),
+    radial-gradient(circle at 88% 62%, rgba(0,165,199,.05), transparent 40%);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:19px;
+  line-height:1.62;
+}
+/* ---- the tunnel rail: signature element ---- */
+.rail{
+  position:fixed; top:0; left:0; width:74px; height:100%;
+  z-index:0; pointer-events:none;
+}
+.rail svg{height:100%;width:100%}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 24px 0 96px}
+@media (max-width:900px){ .rail{display:none} .wrap{padding:0 18px} }
+
+article{max-width:41rem}
+p{margin:0 0 1.05em}
+a{color:var(--dirt);text-decoration-thickness:2px;text-underline-offset:3px}
+a:hover{color:var(--shout)}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+
+h1,h2,h3,.hand{font-family:var(--display);font-weight:700;line-height:1.05}
+h2{font-size:2.15rem;margin:0 0 .1em;color:var(--dirt-dk)}
+h3{font-size:1.35rem;margin:2em 0 .2em;color:var(--ink)}
+h3::before{content:"¤ ";color:var(--cyan)}
+
+/* ---- cover ---- */
+.cover{padding:60px 0 30px;text-align:left;position:relative}
+.cover h1{
+  font-size:clamp(2.6rem,7.4vw,4.9rem);
+  margin:.1em 0 .05em;color:var(--dirt-dk);
+  transform:rotate(-1.4deg);
+}
+.cover h1 em{font-style:normal;color:var(--shout)}
+.kicker{font-family:var(--display);font-size:1.05rem;color:var(--cyan);letter-spacing:.06em;text-transform:uppercase}
+.byline{font-family:var(--display);font-size:1.1rem;color:var(--ink-soft);margin-top:.4em}
+.cover-art{max-width:520px;margin:14px 0 0}
+.cover-art svg{width:100%;height:auto;overflow:visible}
+
+/* ---- table of contents ---- */
+.toc{border-top:3px solid var(--ink);border-bottom:3px solid var(--ink);padding:16px 0;margin:34px 0 10px}
+.toc ol{list-style:none;margin:0;padding:0;columns:2;column-gap:34px;font-family:var(--display);font-size:1.05rem}
+.toc li{margin:0 0 .3em;break-inside:avoid}
+.toc a{text-decoration:none;color:var(--ink)}
+.toc a:hover{color:var(--shout);text-decoration:underline wavy var(--marker)}
+.toc .num{color:var(--cyan);font-weight:700;margin-right:.4em}
+@media (max-width:640px){ .toc ol{columns:1} }
+
+/* ---- chapters ---- */
+section.ch{padding:52px 0 10px;border-top:2px dashed rgba(124,74,42,.35);margin-top:34px}
+section.ch:first-of-type{border-top:0}
+.chnum{
+  font-family:var(--display);font-size:.95rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dirt);background:var(--marker);display:inline-block;
+  padding:2px 10px;transform:rotate(-1.6deg);box-shadow:2px 2px 0 rgba(35,31,28,.75)
+}
+.dek{font-family:var(--display);font-size:1.1rem;color:var(--ink-soft);margin:.5em 0 1.4em}
+
+/* ---- taped code printouts ---- */
+.code{
+  position:relative;background:#fff;color:#1b1b1b;font-family:var(--code);font-size:.83rem;line-height:1.65;
+  padding:20px 20px 18px;margin:28px 0 30px;
+  box-shadow:3px 4px 0 rgba(35,31,28,.16), 0 0 0 1px rgba(35,31,28,.12);
+  transform:rotate(-.35deg);overflow-x:auto;white-space:pre;
+}
+.code:nth-of-type(even){transform:rotate(.4deg)}
+.code::before,.code::after{
+  content:"";position:absolute;width:74px;height:22px;background:rgba(251,232,79,.72);
+  box-shadow:0 1px 2px rgba(0,0,0,.12);
+}
+.code::before{top:-10px;left:-14px;transform:rotate(-7deg)}
+.code::after{bottom:-10px;right:-14px;transform:rotate(-5deg)}
+.code b{color:var(--turnip);font-weight:600}      /* keyword */
+.code i{color:#0F7B4F;font-style:normal}           /* string */
+.code u{color:#8A8177;text-decoration:none}        /* comment */
+.code s{color:var(--shout);text-decoration:none}   /* emphasis */
+code{font-family:var(--code);font-size:.86em;background:var(--paper2);padding:1px 5px;border-radius:3px;white-space:nowrap}
+
+/* ---- margin scrawls ---- */
+.scrawl{
+  font-family:var(--display);font-size:.98rem;line-height:1.4;color:var(--dirt-dk);
+  border-left:3px solid var(--cyan);padding:2px 0 2px 12px;margin:22px 0;
+  transform:rotate(-.8deg);
+}
+.scrawl b{color:var(--shout)}
+@media (min-width:1180px){
+  .scrawl{float:right;width:215px;margin:6px -255px 18px 26px;border-left:0;border-top:3px solid var(--cyan);padding:8px 0 0}
+}
+
+/* ---- shouts & panels ---- */
+.shout{font-family:var(--display);color:var(--shout);font-size:1.6rem;display:inline-block;transform:rotate(-2deg)}
+.wiggle:hover{animation:wig .32s linear infinite}
+@keyframes wig{0%{transform:rotate(-3deg) scale(1.04)}50%{transform:rotate(3deg) scale(1.07)}100%{transform:rotate(-3deg) scale(1.04)}}
+.plate{margin:34px 0;text-align:center}
+.plate svg{max-width:100%;height:auto;overflow:visible}
+.cap{font-family:var(--display);font-size:.95rem;color:var(--ink-soft);margin-top:.4em}
+blockquote{
+  margin:30px 0;padding:16px 20px;background:var(--paper2);
+  border:2px solid var(--ink);box-shadow:4px 4px 0 var(--dirt);
+  font-family:var(--display);font-size:1.14rem;color:var(--dirt-dk)
+}
+ul.plain{padding-left:1.1em}
+ul.plain li{margin:.3em 0}
+
+/* ---- the go run stamp ---- */
+.runbox{margin:26px 0 34px}
+.stamp{
+  font-family:var(--display);font-size:1.05rem;background:var(--cyan);color:#06282f;
+  border:2px solid var(--ink);padding:8px 16px;cursor:pointer;
+  box-shadow:4px 4px 0 var(--ink);transform:rotate(-1deg)
+}
+.stamp:active{transform:translate(3px,3px) rotate(-1deg);box-shadow:1px 1px 0 var(--ink)}
+.term{
+  margin-top:14px;background:#231F1C;color:#EFE7D2;font-family:var(--code);font-size:.85rem;
+  padding:14px 16px;min-height:3.6em;border:2px solid var(--ink);white-space:pre-wrap
+}
+.term .c{color:var(--cyan)}
+.term .caret{background:var(--marker);color:#231F1C}
+
+footer{margin:70px 0 60px;padding-top:22px;border-top:3px solid var(--ink);font-size:.95rem;color:var(--ink-soft);max-width:41rem}
+footer .hand{color:var(--dirt-dk);font-size:1.15rem}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<style>
+.rail{background:
+  radial-gradient(circle at 20% 4%, rgba(0,0,0,.30) 2.5px, transparent 3px),
+  radial-gradient(circle at 70% 9%, rgba(0,0,0,.22) 3.5px, transparent 4px),
+  radial-gradient(circle at 40% 15%, rgba(255,255,255,.22) 2px, transparent 2.5px),
+  linear-gradient(90deg,#4A2A12,#7C4A2A 55%,#95603A);
+  background-size:38px 90px,38px 130px,38px 70px,100% 100%;
+  border-right:5px solid #331C09;opacity:.34}
+.hole{display:flex;align-items:flex-end;gap:10px;margin:0 0 6px}
+.hole svg{overflow:visible}
+</style>
+<div class="rail" aria-hidden="true"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="wob" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="9" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="wob2" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="3" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+
+  <!-- reusable gopher face+ears -->
+  <g id="gface">
+    <circle cx="28" cy="27" r="11" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <circle cx="92" cy="27" r="11" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <circle cx="28" cy="27" r="4.5" fill="#8B5E38"/>
+    <circle cx="92" cy="27" r="4.5" fill="#8B5E38"/>
+    <circle cx="60" cy="54" r="38" fill="#CE9C68" stroke="#231F1C" stroke-width="3.5"/>
+    <circle cx="46" cy="47" r="12" fill="#FFFDF6" stroke="#231F1C" stroke-width="3"/>
+    <circle cx="74" cy="47" r="12" fill="#FFFDF6" stroke="#231F1C" stroke-width="3"/>
+    <circle cx="48" cy="49" r="5.6" fill="#231F1C"/>
+    <circle cx="76" cy="49" r="5.6" fill="#231F1C"/>
+    <circle cx="45.5" cy="46" r="2.1" fill="#fff"/>
+    <circle cx="73.5" cy="46" r="2.1" fill="#fff"/>
+    <ellipse cx="60" cy="68" rx="14" ry="9.5" fill="#E5BE91" stroke="#231F1C" stroke-width="2.6"/>
+    <ellipse cx="60" cy="63.5" rx="4.6" ry="3.4" fill="#231F1C"/>
+    <rect x="52.5" y="74" width="15" height="17" rx="2.5" fill="#FFFDF6" stroke="#231F1C" stroke-width="2.8"/>
+    <line x1="60" y1="75" x2="60" y2="90" stroke="#231F1C" stroke-width="2"/>
+    <g stroke="#231F1C" stroke-width="2" stroke-linecap="round">
+      <line x1="44" y1="66" x2="26" y2="61"/><line x1="44" y1="71" x2="27" y2="72"/>
+      <line x1="76" y1="66" x2="94" y2="61"/><line x1="76" y1="71" x2="93" y2="72"/>
+    </g>
+  </g>
+
+  <!-- gopher, arms down -->
+  <symbol id="gopher" viewBox="0 0 120 156">
+    <ellipse cx="44" cy="146" rx="15" ry="7.5" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <ellipse cx="78" cy="146" rx="15" ry="7.5" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <ellipse cx="60" cy="108" rx="35" ry="39" fill="#CE9C68" stroke="#231F1C" stroke-width="3.5"/>
+    <ellipse cx="60" cy="115" rx="21" ry="27" fill="#EBD3B2"/>
+    <ellipse cx="27" cy="106" rx="9" ry="15" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <ellipse cx="93" cy="106" rx="9" ry="15" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <path d="M32 84 Q60 96 88 84 Q60 106 32 84Z" fill="#00A5C7" stroke="#231F1C" stroke-width="2.6"/>
+    <use href="#gface"/>
+  </symbol>
+
+  <!-- gopher, arms up (alarm / joy) -->
+  <symbol id="gopherUp" viewBox="0 0 120 156">
+    <ellipse cx="44" cy="146" rx="15" ry="7.5" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <ellipse cx="78" cy="146" rx="15" ry="7.5" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <ellipse cx="60" cy="108" rx="35" ry="39" fill="#CE9C68" stroke="#231F1C" stroke-width="3.5"/>
+    <ellipse cx="60" cy="115" rx="21" ry="27" fill="#EBD3B2"/>
+    <ellipse cx="20" cy="86" rx="8.5" ry="15" transform="rotate(-38 20 86)" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <ellipse cx="100" cy="86" rx="8.5" ry="15" transform="rotate(38 100 86)" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+    <path d="M32 84 Q60 96 88 84 Q60 106 32 84Z" fill="#00A5C7" stroke="#231F1C" stroke-width="2.6"/>
+    <use href="#gface"/>
+  </symbol>
+
+  <!-- gopher head only, for peeking out of holes -->
+  <symbol id="gopherHead" viewBox="0 0 120 96"><use href="#gface"/></symbol>
+
+  <!-- Nib, the compiler: a very tidy heron -->
+  <symbol id="heron" viewBox="0 0 130 190">
+    <ellipse cx="58" cy="176" rx="4" ry="8" fill="#C9861F" stroke="#231F1C" stroke-width="2.4"/>
+    <ellipse cx="74" cy="176" rx="4" ry="8" fill="#C9861F" stroke="#231F1C" stroke-width="2.4"/>
+    <ellipse cx="66" cy="132" rx="30" ry="38" fill="#CFD8DC" stroke="#231F1C" stroke-width="3.4"/>
+    <path d="M40 118 Q30 148 52 164 Q40 136 46 116Z" fill="#AEBBC2" stroke="#231F1C" stroke-width="2.6"/>
+    <path d="M66 96 Q54 60 62 34" fill="none" stroke="#231F1C" stroke-width="3.4"/>
+    <path d="M66 98 Q58 62 66 36" fill="none" stroke="#CFD8DC" stroke-width="13" stroke-linecap="round"/>
+    <path d="M66 98 Q58 62 66 36" fill="none" stroke="#231F1C" stroke-width="2.6" opacity=".18"/>
+    <circle cx="68" cy="30" r="17" fill="#CFD8DC" stroke="#231F1C" stroke-width="3.2"/>
+    <path d="M84 30 L124 36 L84 40Z" fill="#F2B441" stroke="#231F1C" stroke-width="2.6"/>
+    <circle cx="70" cy="26" r="4.4" fill="#231F1C"/>
+    <circle cx="68.6" cy="24.6" r="1.5" fill="#fff"/>
+    <circle cx="70" cy="26" r="9" fill="none" stroke="#231F1C" stroke-width="2"/>
+    <line x1="79" y1="24" x2="92" y2="14" stroke="#231F1C" stroke-width="1.8"/>
+    <path d="M58 18 Q68 4 82 16" fill="none" stroke="#231F1C" stroke-width="2.4"/>
+    <rect x="76" y="120" width="34" height="42" rx="3" transform="rotate(9 76 120)" fill="#FFFDF6" stroke="#231F1C" stroke-width="2.8"/>
+    <g stroke="#DC2A5C" stroke-width="2.4" stroke-linecap="round">
+      <line x1="82" y1="134" x2="106" y2="138"/><line x1="81" y1="142" x2="100" y2="145"/><line x1="80" y1="150" x2="104" y2="154"/>
+    </g>
+  </symbol>
+
+  <!-- The Duck Who Signs Nothing -->
+  <symbol id="duck" viewBox="0 0 140 110">
+    <ellipse cx="66" cy="72" rx="40" ry="27" fill="#FFFDF6" stroke="#231F1C" stroke-width="3.4"/>
+    <path d="M36 66 Q22 84 44 90 Q34 76 42 64Z" fill="#EFE7D2" stroke="#231F1C" stroke-width="2.6"/>
+    <circle cx="98" cy="38" r="20" fill="#FFFDF6" stroke="#231F1C" stroke-width="3.4"/>
+    <path d="M96 26 Q104 60 92 58" fill="#FFFDF6" stroke="#231F1C" stroke-width="3.4"/>
+    <path d="M116 34 Q140 40 116 48 Q124 41 116 34Z" fill="#F2B441" stroke="#231F1C" stroke-width="2.6"/>
+    <circle cx="103" cy="33" r="4.2" fill="#231F1C"/><circle cx="101.6" cy="31.6" r="1.4" fill="#fff"/>
+    <line x1="56" y1="99" x2="52" y2="108" stroke="#F2B441" stroke-width="4" stroke-linecap="round"/>
+    <line x1="74" y1="99" x2="78" y2="108" stroke="#F2B441" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- a hole in the ground -->
+  <symbol id="hole" viewBox="0 0 160 70">
+    <path d="M4 44 Q22 26 46 30 Q60 12 84 22 Q112 8 132 30 Q154 34 156 50 L156 66 L4 66Z" fill="#7C4A2A" stroke="#231F1C" stroke-width="3"/>
+    <ellipse cx="80" cy="44" rx="36" ry="14" fill="#2C1908" stroke="#231F1C" stroke-width="3"/>
+  </symbol>
+</defs></svg>
+
+<div class="wrap">
+
+<header class="cover">
+  <div class="kicker">A programming adventure, damp at the edges</div>
+  <h1>The Gopher's <em>Damp</em><br>Little Guide to Go</h1>
+  <div class="byline">In which a small tunnelling mammal teaches you a compiled language,<br>and shouts <span class="shout wiggle">CHEEKFULS!</span> at inappropriate moments.</div>
+  <div class="cover-art">
+    <svg viewBox="0 0 520 230" role="img" aria-label="A gopher in a cyan bandana stands beside a shovel and a hole in the ground, shouting.">
+      <g filter="url(#wob)">
+        <line x1="0" y1="196" x2="520" y2="196" stroke="#231F1C" stroke-width="4"/>
+        <use href="#hole" x="330" y="150" width="190" height="83"/>
+        <use href="#gopher" x="120" y="60" width="120" height="156"/>
+        <g stroke="#231F1C" stroke-width="4" stroke-linecap="round">
+          <line x1="262" y1="86" x2="272" y2="176"/>
+        </g>
+        <path d="M258 168 L288 172 L282 200 L256 196Z" fill="#9AA6AC" stroke="#231F1C" stroke-width="3.4"/>
+        <path d="M256 76 Q262 66 270 78" fill="none" stroke="#231F1C" stroke-width="4"/>
+      </g>
+      <g font-family="Bradley Hand, Chalkboard SE, Comic Sans MS, cursive" font-size="27" fill="#DC2A5C" font-weight="700">
+        <text x="8" y="66" transform="rotate(-9 8 66)">CHEEKFULS!</text>
+      </g>
+      <g stroke="#00A5C7" stroke-width="3" stroke-linecap="round" opacity=".9">
+        <line x1="110" y1="52" x2="98" y2="36"/><line x1="132" y1="44" x2="130" y2="26"/><line x1="152" y1="50" x2="164" y2="34"/>
+      </g>
+    </svg>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Contents">
+  <ol>
+    <li><span class="num">0</span><a href="#ch0">You Have Been Handed a Shovel</a></li>
+    <li><span class="num">1</span><a href="#ch1">Hello, Dirt</a></li>
+    <li><span class="num">2</span><a href="#ch2">Nib the Compiler Is Not Angry, Merely Tidy</a></li>
+    <li><span class="num">3</span><a href="#ch3">Everything Hands You Two Things</a></li>
+    <li><span class="num">4</span><a href="#ch4">A Gopher Is a Small Box of Drawers</a></li>
+    <li><span class="num">5</span><a href="#ch5">Cheek Pouches (Slices &amp; Maps)</a></li>
+    <li><span class="num">6</span><a href="#ch6">The Duck Who Signs Nothing</a></li>
+    <li><span class="num">7</span><a href="#ch7">A Thousand Gophers, One Tube</a></li>
+    <li><span class="num">8</span><a href="#ch8">Ship the Tunnel</a></li>
+  </ol>
+</nav>
+
+<article>
+<section class="ch" id="ch0">
+  <div class="hole"><svg width="120" height="58" viewBox="0 0 160 78" aria-hidden="true"><g filter="url(#wob2)"><use href="#hole" y="8" width="160" height="70"/><use href="#gopherHead" x="42" y="0" width="76" height="61"/></g></svg></div>
+  <div class="chnum">Chapter 0</div>
+  <h2>You Have Been Handed a Shovel</h2>
+  <p class="dek">Nobody asked whether you wanted one. That is how shovels work.</p>
+
+  <p>Somebody has left a gopher in your kitchen.</p>
+
+  <p>You didn't order a gopher. But there it is, sitting in your good fruit bowl, wearing a cyan bandana, and it has brought a shovel that is much too large for it and a small laminated card that says <b>HELLO I AM YOUR TEACHER</b> in handwriting that is honestly not great.</p>
+
+  <p>The gopher's name is <b>Gord</b>. Gord digs tunnels. He digs them <em>alarmingly</em> fast — this is the entire personality of the language you are about to learn — and he has been sent to teach you Go, which is a programming language invented by three people at a company who were, according to legend, tired of waiting for something to compile.</p>
+
+  <div class="scrawl">Go is sometimes called <b>Golang</b>, because "go" is a difficult thing to type into a search box. Nobody who uses it calls it that out loud. They just say Go, and then, if pressed, they say it again louder.</div>
+
+  <p>Here is what Gord believes, deep in his small round chest:</p>
+
+  <blockquote>A tunnel should be boring. A tunnel should be so boring that a stranger can walk into it in the dark and not be surprised by anything. Surprises in tunnels are how you end up in someone's basement.</blockquote>
+
+  <p>This is Go's whole disposition. Other languages will offer you eleven elegant ways to say one thing, and you will spend a pleasant afternoon choosing between them. Go offers you one way, which is slightly ugly, and then it puts a hand on your shoulder and walks you away from the argument.</p>
+
+  <p>You may resent this for about three weeks. Then one day you will open a stranger's Go code and read it at a glance like a road sign, and you will feel a strange grudging warmth, and Gord will already be gone, and there will be dirt on your counter.</p>
+
+  <h3>What you need before we start</h3>
+  <ul class="plain">
+    <li>Go, installed from <a href="https://go.dev/dl/">go.dev/dl</a>. It is one download. It does not ask you questions.</li>
+    <li>Any text editor you already like.</li>
+    <li>A terminal, in which we will type things and be pleased.</li>
+    <li>Optionally: <a href="https://go.dev/play/">the Go Playground</a>, a website that runs Go for you, so you can put this whole guide off until Thursday.</li>
+  </ul>
+</section>
+
+<section class="ch" id="ch1">
+  <div class="hole"><svg width="120" height="58" viewBox="0 0 160 78" aria-hidden="true"><g filter="url(#wob2)"><use href="#hole" y="8" width="160" height="70"/><use href="#gopherHead" x="42" y="0" width="76" height="61"/></g></svg></div>
+  <div class="chnum">Chapter 1</div>
+  <h2>Hello, Dirt</h2>
+  <p class="dek">The smallest possible tunnel, and the ritual for entering it.</p>
+
+  <p>Gord drags a folder onto your desk with his teeth. Make one too. Call it <code>tunnel</code>. Go inside it and say this to your terminal:</p>
+
+  <div class="code">$ mkdir tunnel &amp;&amp; cd tunnel
+$ go mod init example.com/tunnel
+<u>go: creating new go.mod: module example.com/tunnel</u></div>
+
+  <p>You have just declared a <b>module</b>, which is Go's word for "this pile of files is one pile." The name looks like a website because someday it might be one; for now it is a fib everyone has agreed to accept.</p>
+
+  <p>Now a file called <code>main.go</code>:</p>
+
+  <div class="code"><b>package</b> main
+
+<b>import</b> <i>"fmt"</i>
+
+<b>func</b> main() {
+    fmt.Println(<i>"hello, dirt"</i>)
+}</div>
+
+  <div class="runbox">
+    <button class="stamp" id="runbtn" type="button">$ go run .</button>
+    <div class="term" id="term" aria-live="polite"><span class="c">press the stamp</span></div>
+  </div>
+
+  <p>Four things happened there, and Gord would like to point at each of them with the shovel.</p>
+
+  <p><b>package main</b> is the gopher saying "this tunnel has a front door." Every Go file belongs to a package; the package named <code>main</code> is the special one that becomes a program you can actually run. Any other name makes a library — a tunnel with no entrance, which other tunnels connect to.</p>
+
+  <p><b>import "fmt"</b> fetches a crate from the standard library. It's pronounced "fumpt" by absolutely nobody and "format" by everyone. It does printing. Go's standard library is unusually large and unusually good, and a fair amount of learning Go is just discovering that the thing you were about to write is already in there, sitting quietly, tested.</p>
+
+  <p><b>func main()</b> is where the program starts. When <code>main</code> returns, your program is over. Gord finds this very restful.</p>
+
+  <div class="scrawl">Those aren't spaces, they're tabs, and no you don't get to have an opinion. Run <b>gofmt</b> (or <b>go fmt ./...</b>) and the formatting argument ends forever. Every Go project on earth looks the same. It is the most peaceful war ever won.</div>
+
+  <p>And <b>go run .</b> compiles the whole thing and runs it in one breath. When you want the actual finished burrow — a single self-contained binary you can hand to a stranger — you say <code>go build</code> instead, and out drops one file with no runtime to install alongside it. This is the trick that made Go popular with people who deploy things at 2am.</p>
+</section>
+
+<section class="ch" id="ch2">
+  <div class="hole"><svg width="120" height="58" viewBox="0 0 160 78" aria-hidden="true"><g filter="url(#wob2)"><use href="#hole" y="8" width="160" height="70"/><use href="#gopherHead" x="42" y="0" width="76" height="61"/></g></svg></div>
+  <div class="chnum">Chapter 2</div>
+  <h2>Nib the Compiler Is Not Angry, Merely Tidy</h2>
+  <p class="dek">Variables, types, zero values, and one bird with strong feelings about turnips.</p>
+
+  <p>There is a heron standing in your hallway.</p>
+
+  <div class="plate">
+    <svg viewBox="0 0 460 210" role="img" aria-label="A stern heron wearing a monocle holds a clipboard and points at a small gopher, who has dropped a turnip.">
+      <g filter="url(#wob)">
+        <line x1="0" y1="186" x2="460" y2="186" stroke="#231F1C" stroke-width="4"/>
+        <use href="#heron" x="40" y="6" width="130" height="190"/>
+        <use href="#gopher" x="300" y="66" width="110" height="143"/>
+        <ellipse cx="264" cy="176" rx="20" ry="15" fill="#E8E2F2" stroke="#231F1C" stroke-width="3"/>
+        <path d="M258 162 Q262 148 272 152" fill="none" stroke="#7A55C0" stroke-width="3.4"/>
+        <ellipse cx="264" cy="168" rx="20" ry="10" fill="#7A55C0" stroke="#231F1C" stroke-width="3"/>
+      </g>
+      <g font-family="Bradley Hand, Chalkboard SE, Comic Sans MS, cursive" font-size="19" font-weight="700" fill="#DC2A5C">
+        <text x="176" y="40" transform="rotate(-5 176 40)">declared and not used:</text>
+        <text x="200" y="62" transform="rotate(-5 200 62)">turnips</text>
+      </g>
+    </svg>
+    <div class="cap">Nib does not compile your program. Nib <em>declines</em> your program.</div>
+  </div>
+
+  <p>His name is <b>Nib</b> and he is the compiler. He wears a monocle he does not need. He is holding a clipboard and he is going to refuse to build your program over things you consider trivial, and in about a month you will realise he has been doing you favours the entire time.</p>
+
+  <p>Here is Nib's most famous grievance. You declare a variable, you never use it, Nib will not proceed:</p>
+
+  <div class="code"><b>func</b> main() {
+    turnips := 4      <s>// declared and not used: turnips</s>
+    fmt.Println(<i>"nothing about turnips"</i>)
+}</div>
+
+  <p>Every other language shrugs at this. Nib treats an unused variable as evidence that you changed your mind halfway and forgot to tell anyone. He is usually right. Same for imports you don't use — delete them, or Nib stands in the doorway.</p>
+
+  <h3>The two ways to name a thing</h3>
+
+  <div class="code"><b>var</b> depth int = 30     <u>// the long way, with the type spelled out</u>
+<b>var</b> depth2 = 30        <u>// type inferred: int</u>
+depth3 := 30            <u>// short way. only works inside a function</u>
+
+<b>const</b> maxDepth = 200   <u>// fixed at compile time, forever</u></div>
+
+  <p>You'll use <code>:=</code> almost always. Gord uses it for everything, including his taxes.</p>
+
+  <h3>Zero values, or: nothing is ever empty</h3>
+
+  <p>This is the loveliest thing about Go and hardly anyone mentions it. A declared variable is never garbage and never <em>undefined</em>. It starts at the zero of its kind, immediately, always:</p>
+
+  <div class="code"><b>var</b> n int        <u>// 0</u>
+<b>var</b> s string     <u>// ""  (an empty string, not nil)</u>
+<b>var</b> ok bool      <u>// false</u>
+<b>var</b> f float64    <u>// 0</u>
+<b>var</b> p *Gopher    <u>// nil — a signpost pointing at no gopher at all</u></div>
+
+  <p>So a fresh <code>Gopher</code> struct isn't a hollow shell to be filled in later; it's a real gopher with no name, no mood, and an empty pouch. Whole categories of nervous initialisation code just evaporate.</p>
+
+  <div class="scrawl">Types in Go don't convert themselves out of politeness. An <b>int</b> will not quietly become a <b>float64</b> for you. Say <b>float64(n)</b> and mean it. Nib is watching.</div>
+
+  <h3>Ifs and fors, and that's the lot</h3>
+
+  <p>Go has one loop. It is called <code>for</code>. It wears several hats:</p>
+
+  <div class="code"><b>for</b> i := 0; i &lt; 3; i++ { }        <u>// the classic</u>
+<b>for</b> depth &lt; 200 { depth++ }       <u>// the "while" hat</u>
+<b>for</b> { <b>break</b> }                     <u>// forever, until it isn't</u>
+<b>for</b> i, thing := <b>range</b> pouch { }    <u>// over a collection</u>
+
+<b>if</b> depth &gt; 100 {
+    fmt.Println(<i>"that's plenty"</i>)
+} <b>else</b> {
+    fmt.Println(<i>"keep going"</i>)
+}</div>
+
+  <p>No parentheses around the condition. No while, no do-while, no unless. There is a <code>switch</code> and it's genuinely nice — it doesn't fall through unless you beg — but that's the whole control-flow shelf. You can now read the loops in every Go program ever written. Sorry it wasn't more of an adventure.</p>
+</section>
+<section class="ch" id="ch3">
+  <div class="hole"><svg width="120" height="58" viewBox="0 0 160 78" aria-hidden="true"><g filter="url(#wob2)"><use href="#hole" y="8" width="160" height="70"/><use href="#gopherHead" x="42" y="0" width="76" height="61"/></g></svg></div>
+  <div class="chnum">Chapter 3</div>
+  <h2>Everything Hands You Two Things</h2>
+  <p class="dek">Functions, the second thing, and the small damp envelope named err.</p>
+
+  <p>In most languages, when something goes wrong, the function panics like a startled bird and hurls an exception up through the ceiling, and somewhere three floors above, someone catches it, or doesn't.</p>
+
+  <p>Go does not do this. In Go, when something goes wrong, the function turns around, and hands you <em>a small damp envelope</em>.</p>
+
+  <div class="plate">
+    <svg viewBox="0 0 420 200" role="img" aria-label="A gopher holds out a slightly soggy envelope labelled err toward the reader.">
+      <g filter="url(#wob)">
+        <line x1="0" y1="182" x2="420" y2="182" stroke="#231F1C" stroke-width="4"/>
+        <use href="#gopher" x="60" y="40" width="120" height="156"/>
+        <g transform="rotate(-7 250 108)">
+          <path d="M196 84 L306 84 L306 140 L196 140Z" fill="#FFFDF6" stroke="#231F1C" stroke-width="3.4"/>
+          <path d="M196 84 L251 116 L306 84" fill="none" stroke="#231F1C" stroke-width="2.6"/>
+          <path d="M198 138 Q230 128 250 140 Q272 152 304 138 L306 141 L196 141Z" fill="#9FD8E6"/>
+        </g>
+        <g stroke="#231F1C" stroke-width="3" stroke-linecap="round" opacity=".55">
+          <line x1="212" y1="150" x2="208" y2="164"/><line x1="240" y1="156" x2="238" y2="170"/><line x1="268" y1="150" x2="266" y2="164"/>
+        </g>
+      </g>
+      <g font-family="Bradley Hand, Chalkboard SE, Comic Sans MS, cursive" font-size="26" font-weight="700" fill="#DC2A5C">
+        <text x="326" y="112">err</text>
+      </g>
+      <g font-family="Bradley Hand, Chalkboard SE, Comic Sans MS, cursive" font-size="16" fill="#54301A">
+        <text x="196" y="182" transform="rotate(-3 196 182)">it is always slightly wet. nobody knows why.</text>
+      </g>
+    </svg>
+  </div>
+
+  <p>Functions can return more than one value, and by long tradition the last one is the envelope:</p>
+
+  <div class="code"><b>func</b> dig(cm int) (int, error) {
+    <b>if</b> cm &gt; 40 {
+        <b>return</b> 0, fmt.Errorf(<i>"hit a pipe at %d cm"</i>, cm)
+    }
+    <b>return</b> cm, nil
+}</div>
+
+  <p>And on the other side, the ritual. You will type this ten thousand times. Gord types it in his sleep. Some people complain about it in blog posts; Gord reads those blog posts and says nothing, and digs.</p>
+
+  <div class="code">moved, err := dig(41)
+<b>if</b> err != nil {
+    fmt.Println(<i>"well:"</i>, err)
+    <b>return</b>
+}
+fmt.Println(<i>"dug"</i>, moved, <i>"cm"</i>)</div>
+
+  <p>Here is the argument for the ritual, and it's better than it looks. An error in Go is an ordinary value. It sits in a variable. It is passed around, wrapped, logged, ignored on purpose. There is no invisible second control-flow system running through your program behind a curtain. Every place a thing can go wrong is a place with three visible lines of code in it. Your program becomes long and extremely honest.</p>
+
+  <div class="scrawl">Wrap an envelope inside a bigger envelope with <b>%w</b>: <br>fmt.Errorf("digging: %w", err)<br>Later, <b>errors.Is</b> and <b>errors.As</b> can reach back inside and find the original.</div>
+
+  <h3>defer: the promise you make on the way out</h3>
+
+  <p>Gord, on entering a room, always says aloud what he will do when he leaves. Then he forgets about it entirely, and it happens anyway.</p>
+
+  <div class="code"><b>func</b> visit() {
+    f, err := os.Open(<i>"tunnel.txt"</i>)
+    <b>if</b> err != nil {
+        <b>return</b>
+    }
+    <b>defer</b> f.Close()      <u>// runs when visit() ends, no matter how it ends</u>
+
+    <u>// ... twelve branches, three returns, one panic ...</u>
+}</div>
+
+  <p>A deferred call runs when the surrounding function finishes — normal return, early return, or a full-blown panic. Put the cleanup right next to the thing that needs cleaning, one line later, and then stop thinking about it. It's the single most agreeable feature in the language.</p>
+
+  <h3>panic, briefly, and then let's not</h3>
+
+  <p>Go does have a panic. It is for when the tunnel has collapsed and there is no sensible next step — a bug, not a bad day. It unwinds, runs your defers, and prints a stack trace. There's a <code>recover</code> to catch it, mostly used at the very top of long-lived servers to keep one bad request from taking the building down.</p>
+
+  <p>Do not use panic as your envelope. Nib will not stop you. Nib will simply think less of you, silently, forever.</p>
+</section>
+
+<section class="ch" id="ch4">
+  <div class="hole"><svg width="120" height="58" viewBox="0 0 160 78" aria-hidden="true"><g filter="url(#wob2)"><use href="#hole" y="8" width="160" height="70"/><use href="#gopherHead" x="42" y="0" width="76" height="61"/></g></svg></div>
+  <div class="chnum">Chapter 4</div>
+  <h2>A Gopher Is a Small Box of Drawers</h2>
+  <p class="dek">Structs, methods, and the difference between a gopher and a note about where a gopher is.</p>
+
+  <p>Go has no classes. There is no inheritance, no <code>extends</code>, no eight-generation family tree of AbstractBaseRodent. There is a <b>struct</b>, which is a box with labelled drawers, and there are functions you can bolt onto it.</p>
+
+  <div class="code"><b>type</b> Gopher <b>struct</b> {
+    Name  string
+    Depth int
+    Pouch []string
+}
+
+gord := Gopher{Name: <i>"Gord"</i>, Depth: 12}
+fmt.Println(gord.Name, gord.Depth, <b>len</b>(gord.Pouch))
+<u>// Gord 12 0        — Pouch is nil, and len(nil) is a peaceful 0</u></div>
+
+  <div class="scrawl">Capitalisation <b>is</b> the access modifier. <b>Name</b> is visible to other packages; <b>name</b> is private to this one. That's it. That's the whole keyword-free privacy system.</div>
+
+  <h3>Methods are just functions with a little hat</h3>
+
+  <div class="code"><b>func</b> (g Gopher) Greet() string {
+    <b>return</b> g.Name + <i>" says CHEEKFULS!"</i>
+}
+
+<b>func</b> (g *Gopher) Stuff(thing string) {
+    g.Pouch = <b>append</b>(g.Pouch, thing)
+}
+
+fmt.Println(gord.Greet())   <u>// Gord says CHEEKFULS!</u>
+gord.Stuff(<i>"one bolt"</i>)      <u>// gord now genuinely has a bolt</u></div>
+
+  <p>The bit in parentheses before the name is the <b>receiver</b>. And now the one thing in this chapter you must actually hold in your head:</p>
+
+  <blockquote>(g Gopher) receives a <em>photocopy of the gopher</em>.<br>(g *Gopher) receives <em>directions to the actual gopher</em>.</blockquote>
+
+  <p>Write to a photocopy and your changes are thrown in the bin the moment the function ends. That's why <code>Stuff</code> takes a pointer — it's rummaging in the real pouch. <code>Greet</code> only reads, so a photocopy is fine.</p>
+
+  <p>Go is kind here: you don't have to remember arrows. Write <code>gord.Stuff("bolt")</code> and the compiler quietly takes the address for you. Rule of thumb: if any method on a type needs a pointer receiver, give them all pointer receivers, for the same reason you don't put one drawer handle on upside down.</p>
+
+  <div class="scrawl">A <b>*Gopher</b> that points nowhere is <b>nil</b>. Reach into a nil pointer's drawers and the program panics. Nil is Go's one genuinely sharp corner — mind it and you'll be fine.</div>
+
+  <h3>Embedding, which is not inheritance no matter how much it looks like it</h3>
+
+  <div class="code"><b>type</b> Mammal <b>struct</b> { Legs int }
+<b>func</b> (m Mammal) Walk() string { <b>return</b> <i>"padding along"</i> }
+
+<b>type</b> Gopher <b>struct</b> {
+    Mammal          <u>// no field name — this is embedding</u>
+    Name string
+}
+
+g := Gopher{Mammal: Mammal{Legs: 4}, Name: <i>"Gord"</i>}
+fmt.Println(g.Legs, g.Walk())   <u>// 4 padding along</u></div>
+
+  <p>The outer type borrows the inner one's fields and methods without pretending to <em>be</em> it. Go calls this composition, and it is deliberately less powerful than inheritance, and that is the entire point.</p>
+</section>
+
+<section class="ch" id="ch5">
+  <div class="hole"><svg width="120" height="58" viewBox="0 0 160 78" aria-hidden="true"><g filter="url(#wob2)"><use href="#hole" y="8" width="160" height="70"/><use href="#gopherHead" x="42" y="0" width="76" height="61"/></g></svg></div>
+  <div class="chnum">Chapter 5</div>
+  <h2>Cheek Pouches</h2>
+  <p class="dek">Slices and maps: the only two containers you will use for years.</p>
+
+  <div class="plate">
+    <svg viewBox="0 0 320 190" role="img" aria-label="A gopher with enormously overstuffed cheeks looks pleased with itself.">
+      <g filter="url(#wob)">
+        <line x1="0" y1="176" x2="320" y2="176" stroke="#231F1C" stroke-width="4"/>
+        <use href="#gopher" x="100" y="26" width="120" height="156"/>
+        <ellipse cx="112" cy="76" rx="24" ry="21" fill="#CE9C68" stroke="#231F1C" stroke-width="3.4"/>
+        <ellipse cx="208" cy="76" rx="24" ry="21" fill="#CE9C68" stroke="#231F1C" stroke-width="3.4"/>
+        <g stroke="#A5764A" stroke-width="2.4" fill="none">
+          <path d="M104 68 Q112 76 104 84"/><path d="M216 68 Q208 76 216 84"/>
+        </g>
+      </g>
+      <g font-family="Bradley Hand, Chalkboard SE, Comic Sans MS, cursive" font-size="15" fill="#54301A">
+        <text x="12" y="42" transform="rotate(-6 12 42)">len 2</text>
+        <text x="248" y="42" transform="rotate(6 248 42)">cap 8</text>
+      </g>
+    </svg>
+  </div>
+
+  <p>A <b>slice</b> is a growable list. It is what you reach for roughly always. Behind it sits a fixed-size array, which you will almost never touch directly, the way you almost never touch the studs behind a wall.</p>
+
+  <div class="code">pouch := []string{<i>"acorn"</i>, <i>"bolt"</i>}
+pouch = <b>append</b>(pouch, <i>"one sock"</i>)     <s>// note: you must reassign</s>
+
+fmt.Println(<b>len</b>(pouch), pouch[0])      <u>// 3 acorn</u>
+fmt.Println(pouch[1:])                 <u>// [bolt one sock]</u>
+
+<b>for</b> i, thing := <b>range</b> pouch {
+    fmt.Println(i, thing)
+}</div>
+
+  <p>That reassignment is not decoration. <code>append</code> may need more room than the pouch has; when it does, it quietly moves everything into a bigger pouch and hands you a new one. Throw away the return value and you throw away the move. If you know how much you're about to stuff in, say so up front:</p>
+
+  <div class="code">pouch := <b>make</b>([]string, 0, 8)   <u>// length 0, room for 8 before it moves house</u></div>
+
+  <h3>Maps: the labelled shelf</h3>
+
+  <div class="code">counts := <b>map</b>[string]int{}
+counts[<i>"acorn"</i>]++
+counts[<i>"acorn"</i>]++
+
+n := counts[<i>"radish"</i>]              <u>// 0 — missing keys give the zero value</u>
+n, ok := counts[<i>"radish"</i>]          <u>// 0, false — the two-value form knows the truth</u>
+
+<b>delete</b>(counts, <i>"acorn"</i>)</div>
+
+  <p>That <code>ok</code> is how you tell "not there" apart from "there, and zero." The two-value read is the whole trick, and it shows up all over Go: a value, and a small quiet second thing telling you whether to trust it.</p>
+
+  <div class="scrawl">Ranging over a map gives you the keys in a <b>deliberately random order</b> every single run. The language does this on purpose, so you can never accidentally depend on it. Want order? Collect the keys into a slice and <b>sort.Strings</b> them.</div>
+
+  <p>One trap, and it's a real one: a map declared with <code>var m map[string]int</code> is nil. You can read from it happily forever. Write one key to it and the program panics. Use <code>map[string]int{}</code> or <code>make(map[string]int)</code> and it never comes up again.</p>
+</section>
+<section class="ch" id="ch6">
+  <div class="hole"><svg width="120" height="58" viewBox="0 0 160 78" aria-hidden="true"><g filter="url(#wob2)"><use href="#hole" y="8" width="160" height="70"/><use href="#gopherHead" x="42" y="0" width="76" height="61"/></g></svg></div>
+  <div class="chnum">Chapter 6</div>
+  <h2>The Duck Who Signs Nothing</h2>
+  <p class="dek">Interfaces, and the best idea in the language.</p>
+
+  <p>A duck has been standing at the end of the tunnel for some time.</p>
+
+  <div class="plate">
+    <svg viewBox="0 0 440 190" role="img" aria-label="A duck stands beside a contract on the ground that it has pointedly not signed, while a gopher looks on.">
+      <g filter="url(#wob)">
+        <line x1="0" y1="172" x2="440" y2="172" stroke="#231F1C" stroke-width="4"/>
+        <use href="#duck" x="220" y="58" width="150" height="118"/>
+        <use href="#gopher" x="40" y="46" width="100" height="130"/>
+        <g transform="rotate(-6 180 156)">
+          <rect x="146" y="132" width="68" height="42" fill="#FFFDF6" stroke="#231F1C" stroke-width="3"/>
+          <g stroke="#8A8177" stroke-width="2"><line x1="154" y1="144" x2="204" y2="144"/><line x1="154" y1="152" x2="196" y2="152"/></g>
+          <line x1="154" y1="164" x2="200" y2="164" stroke="#231F1C" stroke-width="2"/>
+        </g>
+      </g>
+      <g font-family="Bradley Hand, Chalkboard SE, Comic Sans MS, cursive" font-weight="700">
+        <text x="300" y="34" font-size="24" fill="#DC2A5C" transform="rotate(-4 300 34)">quack</text>
+        <text x="132" y="122" font-size="14" fill="#54301A">unsigned</text>
+      </g>
+    </svg>
+    <div class="cap">It never agreed to anything. It simply quacks, and so it qualifies.</div>
+  </div>
+
+  <p>An <b>interface</b> in Go is a list of behaviours. Not a class to inherit, not a contract to sign — just a list, written down somewhere, of what a thing must be able to do.</p>
+
+  <div class="code"><b>type</b> Digger <b>interface</b> {
+    Dig(cm int) string
+}</div>
+
+  <p>Now here is the part that makes people sit up. Nobody has to <em>declare</em> that they implement it. There is no <code>implements Digger</code>. If a type happens to have a method called <code>Dig</code> that takes an int and returns a string, it <em>is</em> a Digger, retroactively, whether it knew about the interface or not:</p>
+
+  <div class="code"><b>type</b> Gopher <b>struct</b>{ Name string }
+<b>func</b> (g Gopher) Dig(cm int) string {
+    <b>return</b> g.Name + <i>" tunnels "</i> + strconv.Itoa(cm) + <i>"cm, humming"</i>
+}
+
+<b>type</b> Backhoe <b>struct</b>{}
+<b>func</b> (Backhoe) Dig(cm int) string {
+    <b>return</b> <i>"BACKHOE DIGS "</i> + strconv.Itoa(cm) + <i>"CM. BACKHOE FEELS NOTHING"</i>
+}
+
+<b>func</b> hire(d Digger) {
+    fmt.Println(d.Dig(30))
+}
+
+hire(Gopher{Name: <i>"Gord"</i>})
+hire(Backhoe{})</div>
+
+  <p>The consequence is quietly enormous: you can write an interface <em>after</em> the types exist, and even for types you don't own — in someone else's library, in the standard library, in code written before you were hired. You define interfaces where you <em>consume</em> them, not where the types live.</p>
+
+  <div class="scrawl">Which is why Go people say: <b>keep interfaces small.</b> One method is normal. The most-used interface in the whole language, <b>io.Writer</b>, has exactly one. Big interfaces are a smell you'll learn to sniff.</div>
+
+  <p>You've been using this since chapter three without knowing. <code>error</code> is not magic; it is an interface with one method:</p>
+
+  <div class="code"><b>type</b> error <b>interface</b> {
+    Error() string
+}</div>
+
+  <p>Give anything an <code>Error() string</code> method and it can be an error. That's the whole envelope system, all the way down.</p>
+
+  <h3>The empty interface, and getting your thing back out</h3>
+
+  <p>An interface with no methods — <code>interface{}</code>, or its friendlier modern spelling <code>any</code> — is satisfied by literally everything, because everything can do nothing. It's the "I'll take whatever" box. Getting the real value back out requires you to ask, politely, and be prepared to be wrong:</p>
+
+  <div class="code"><b>var</b> thing any = Gopher{Name: <i>"Gord"</i>}
+
+g, ok := thing.(Gopher)      <u>// ask: are you a Gopher?</u>
+<b>if</b> ok {
+    fmt.Println(g.Name)
+}
+
+<b>switch</b> v := thing.(<b>type</b>) {    <u>// or ask about several at once</u>
+<b>case</b> Gopher:  fmt.Println(<i>"a gopher named"</i>, v.Name)
+<b>case</b> Backhoe: fmt.Println(<i>"oh no"</i>)
+<b>default</b>:      fmt.Println(<i>"unclear"</i>)
+}</div>
+
+  <p>Reach for <code>any</code> rarely. Modern Go has <b>generics</b> for the cases where you genuinely mean "a list of some type, I don't mind which" — <code>func Largest[T int | float64](xs []T) T</code> — and Gord's advice is to write ordinary boring code for a good long while before you go near them.</p>
+</section>
+
+<section class="ch" id="ch7">
+  <div class="hole"><svg width="120" height="58" viewBox="0 0 160 78" aria-hidden="true"><g filter="url(#wob2)"><use href="#hole" y="8" width="160" height="70"/><use href="#gopherHead" x="42" y="0" width="76" height="61"/></g></svg></div>
+  <div class="chnum">Chapter 7</div>
+  <h2>A Thousand Gophers, One Tube</h2>
+  <p class="dek">Goroutines, channels, select — the reason anyone learns this language.</p>
+
+  <p>Gord has brothers. Gord has an <em>unreasonable</em> number of brothers, and they are all currently digging, and there is a pneumatic tube running between them, and buckets of dirt keep arriving in it, and everyone seems calm.</p>
+
+  <div class="plate">
+    <svg viewBox="0 0 470 230" role="img" aria-label="Three gophers underground dig at once, connected by a pneumatic tube carrying a bucket of dirt from one to another.">
+      <g filter="url(#wob)">
+        <rect x="0" y="0" width="470" height="30" fill="#95603A" opacity=".45"/>
+        <line x1="0" y1="30" x2="470" y2="30" stroke="#231F1C" stroke-width="4"/>
+        <use href="#gopher" x="20" y="98" width="98" height="127"/>
+        <use href="#gopher" x="180" y="98" width="98" height="127"/>
+        <use href="#gopherUp" x="340" y="98" width="98" height="127"/>
+        <rect x="60" y="58" width="330" height="26" rx="13" fill="#D8EEF4" stroke="#231F1C" stroke-width="3.2"/>
+        <ellipse cx="242" cy="71" rx="16" ry="9" fill="#7C4A2A" stroke="#231F1C" stroke-width="2.6"/>
+        <path d="M356 62 L378 71 L356 80Z" fill="#00A5C7" stroke="#231F1C" stroke-width="2.4"/>
+        <line x1="230" y1="30" x2="230" y2="58" stroke="#231F1C" stroke-width="3" stroke-dasharray="6 5"/>
+      </g>
+      <g font-family="Bradley Hand, Chalkboard SE, Comic Sans MS, cursive" font-size="16" fill="#54301A">
+        <text x="66" y="106">go dig()</text><text x="226" y="106">go dig()</text><text x="386" y="106">go dig()</text>
+        <text x="150" y="52" font-size="15" fill="#00A5C7">chan Bucket</text>
+      </g>
+    </svg>
+  </div>
+
+  <p>Put the word <code>go</code> in front of a function call and it goes off and happens somewhere else while you carry on. That's a <b>goroutine</b>. It is not a thread — it's much cheaper, a few kilobytes, and Go's runtime shuffles hundreds of thousands of them across your actual CPU cores without asking you to think about it.</p>
+
+  <div class="code"><b>go</b> dig(30)            <u>// off it goes. you are already on the next line.</u></div>
+
+  <p>Which raises the obvious problem: how do the brothers tell each other anything? Not by all scribbling in the same notebook and hoping. They use the tube.</p>
+
+  <div class="code">tube := <b>make</b>(<b>chan</b> string)      <u>// a channel that carries strings</u>
+
+<b>go func</b>() {
+    tube &lt;- <i>"one bucket of dirt"</i>   <u>// send: blocks until someone receives</u>
+}()
+
+bucket := &lt;-tube                  <u>// receive: blocks until something arrives</u>
+fmt.Println(bucket)</div>
+
+  <p>The arrow points the way the dirt travels. And notice the blocking — that's not a limitation, that's the synchronisation. Nobody needs a lock, because only one gopher holds the bucket at a time by construction. Go's slogan for this is worth paraphrasing badly: don't fight over one notebook; pass notes.</p>
+
+  <div class="scrawl">A channel you <b>close()</b> can still be drained, then yields zero values forever. <b>for b := range tube</b> loops until the channel closes — the tidiest way to say "until the digging is done".</div>
+
+  <h3>Waiting for everyone to finish</h3>
+
+  <div class="code"><b>var</b> wg sync.WaitGroup
+
+<b>for</b> i := 1; i &lt;= 3; i++ {
+    wg.Add(1)
+    <b>go func</b>() {
+        <b>defer</b> wg.Done()
+        fmt.Println(<i>"gopher"</i>, i, <i>"is digging"</i>)
+    }()
+}
+
+wg.Wait()      <u>// main waits here until all three call Done()</u>
+fmt.Println(<i>"tunnel complete"</i>)</div>
+
+  <p>Add one, defer Done, Wait at the end. Three moves, and you'll use them constantly. Without that <code>Wait</code>, <code>main</code> returns, the program ends, and every goroutine is vaporised mid-sentence — the program does not wait for its own children.</p>
+
+  <div class="scrawl">Since Go 1.22 each loop iteration gets its own <b>i</b>, so the code above does what it looks like it does. In older Go you had to pass <b>i</b> in as an argument, and if you didn't, all three gophers shouted <b>4</b>. A famous puddle to step in.</div>
+
+  <h3>select: watching several tube mouths at once</h3>
+
+  <div class="code"><b>select</b> {
+<b>case</b> bucket := &lt;-tube:
+    fmt.Println(<i>"dirt arrived:"</i>, bucket)
+<b>case</b> &lt;-time.After(2 * time.Second):
+    fmt.Println(<i>"nobody sent anything. suspicious."</i>)
+}</div>
+
+  <p><code>select</code> waits on several channel operations and takes whichever is ready first. That's how timeouts, cancellation and "whoever answers first wins" all get written in Go, and it's why the language ended up running so much of the internet's plumbing.</p>
+
+  <p>There <em>is</em> a <code>sync.Mutex</code> for the times when a shared notebook really is the right answer — a counter, a cache. Use it without shame when it fits. But reach for the tube first.</p>
+</section>
+
+<section class="ch" id="ch8">
+  <div class="hole"><svg width="120" height="58" viewBox="0 0 160 78" aria-hidden="true"><g filter="url(#wob2)"><use href="#hole" y="8" width="160" height="70"/><use href="#gopherHead" x="42" y="0" width="76" height="61"/></g></svg></div>
+  <div class="chnum">Chapter 8</div>
+  <h2>Ship the Tunnel</h2>
+  <p class="dek">Tests, tools, and Gord's departure.</p>
+
+  <p>Testing in Go needs no library, no framework, no configuration file with opinions. A file ending in <code>_test.go</code>, a function starting with <code>Test</code>, and a small bird who checks your work:</p>
+
+  <div class="code"><u>// dig_test.go</u>
+<b>package</b> main
+
+<b>import</b> <i>"testing"</i>
+
+<b>func</b> TestDig(t *testing.T) {
+    got, err := dig(10)
+    <b>if</b> err != nil {
+        t.Fatalf(<i>"dig(10) returned error: %v"</i>, err)
+    }
+    <b>if</b> got != 10 {
+        t.Errorf(<i>"dig(10) = %d, want 10"</i>, got)
+    }
+}</div>
+
+  <div class="code">$ go test ./...        <u>// run every test in the module</u>
+$ go vet ./...         <u>// find the mistakes Nib is too polite to mention</u>
+$ go fmt ./...         <u>// end all formatting arguments</u>
+$ go build             <u>// one binary. no runtime. hand it to a stranger.</u>
+$ go doc strings.Split <u>// read the docs without leaving the terminal</u></div>
+
+  <p>No assertion library, you'll notice. You compare things with <code>if</code> and complain with <code>t.Errorf</code>. Yes, it's more typing. Yes, six months later you can still read it.</p>
+
+  <h3>Where to go now</h3>
+  <ul class="plain">
+    <li><a href="https://go.dev/tour/">A Tour of Go</a> — the official interactive tour, and genuinely the best next hour of your life.</li>
+    <li><a href="https://go.dev/doc/effective_go">Effective Go</a> — how Go people actually write it. Short. Read it twice.</li>
+    <li><a href="https://pkg.go.dev/std">The standard library</a> — go browsing. <code>net/http</code>, <code>encoding/json</code>, <code>strings</code>, <code>time</code>. You'll find things you were about to build.</li>
+    <li>Then build something small and real: a command-line tool that eats a file, or an HTTP server that answers in about twelve lines. Go rewards the small real thing.</li>
+  </ul>
+
+  <h3>The last page</h3>
+
+  <p>Gord is packing his shovel. He does this by dragging it, which is not packing.</p>
+
+  <p>He wants to leave you with one thought, and it's the reason he came all this way to sit in your fruit bowl. Go is not a clever language. You are not going to write a line of Go that makes a stranger gasp. There's no syntax to be smug about at parties. Nib will keep declining your programs over unused turnips until the day you retire.</p>
+
+  <p>What you get instead is this: your programs compile in the time it takes to look up from the keyboard. They build into one file that runs anywhere. They do a hundred thousand things at once without you sweating. And a year from now, you will open code you have entirely forgotten writing, and you will simply — dully, gratefully — <em>understand it</em>.</p>
+
+  <p>That's the tunnel. Boring the whole way through, and it comes out exactly where the sign said.</p>
+
+  <div class="plate">
+    <svg viewBox="0 0 380 170" role="img" aria-label="A gopher waves goodbye from the mouth of its hole, one paw raised.">
+      <g filter="url(#wob)">
+        <line x1="0" y1="150" x2="380" y2="150" stroke="#231F1C" stroke-width="4"/>
+        <use href="#hole" x="110" y="86" width="170" height="74"/>
+        <use href="#gopherHead" x="150" y="34" width="90" height="72"/>
+        <ellipse cx="252" cy="72" rx="9" ry="15" transform="rotate(28 252 72)" fill="#A5764A" stroke="#231F1C" stroke-width="3"/>
+      </g>
+      <g font-family="Bradley Hand, Chalkboard SE, Comic Sans MS, cursive" font-size="22" font-weight="700" fill="#DC2A5C">
+        <text x="272" y="46" transform="rotate(-7 272 46)">CHEEKFULS!</text>
+      </g>
+    </svg>
+    <div class="cap">Fin. There is dirt on your counter.</div>
+  </div>
+</section>
+</article>
+
+<footer>
+  <p class="hand">Colophon, scrawled on the back of the laminated card</p>
+  <p>Written and drawn in the spirit of <a href="https://poignant.guide/">Why's (Poignant) Guide to Ruby</a> by <em>why the lucky stiff</em> — whose foxes taught a generation that a programming book is allowed to be strange. The gophers here are my own scribbles and no relation to the official Go mascot, which was drawn by <a href="https://go.dev/blog/gopher">Renée French</a>.</p>
+  <p>Every code sample is real Go and can be pasted into <a href="https://go.dev/play/">the Playground</a>. Gord insists.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var btn = document.getElementById('runbtn');
+  var term = document.getElementById('term');
+  if(!btn || !term) return;
+  var lines = ['$ go run .', 'hello, dirt', '', '$ ' ];
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var busy = false;
+  btn.addEventListener('click', function(){
+    if(busy) return;
+    busy = true;
+    var full = lines.join('\n');
+    if(reduce){ term.textContent = full; busy = false; return; }
+    term.textContent = '';
+    var i = 0;
+    var tick = setInterval(function(){
+      i++;
+      term.textContent = full.slice(0, i);
+      if(i >= full.length){
+        clearInterval(tick);
+        term.innerHTML = 'hello, dirt\n\n<span class="c">$ </span><span class="caret">&nbsp;</span>';
+        busy = false;
+      }
+    }, 38);
+  });
+})();
+</script>
+</body>
+</html>
